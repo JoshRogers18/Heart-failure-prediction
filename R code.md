@@ -1,10 +1,18 @@
 # Predicting Heart Failure 
 
-## Author: Josh Rogers 
-## Date: 7/16/2021
+### Author: Josh Rogers 
+### Date: 7/16/2021
 
-### Question: What age range correlates with the most heart failure and can we predict this 80% of the time for those younger? If not, what other variables might be important to look at / should be considered?
-#### Here we will be looking at correlations and if there is multicollinearity, outliers and if they pass the Rosner test, and if variables are normally distributed looking at the Anderson-Darling test.
+### Question: Can we predict heart failure 80% of the time and what variables are most important?
+#### Here we will be looking at a multitude of things that helped perform a better analysis on this data
+
+- Correlations
+- Multicollinearity
+- Outliers
+- Rosner Test
+- Anderson-Darling Test
+- Logistic Regression
+- Stepwise Regression
 
 ```r
 library(dplyr)
@@ -27,6 +35,7 @@ library(car)
 library(psych)
 library(caretEnsemble)
 library(doParallel)
+library(randomForest)
 
 data <- read.csv("C:/Users/joshr/Desktop/Decision Making/Heart_Failure.csv")
 head(data)
@@ -42,7 +51,7 @@ heart$smoking=factor(heart$smoking)
 heart$DEATH_EVENT=factor(heart$DEATH_EVENT)
 ```
 
-# Function
+## matrix of the p-value of the correlation
 ```r
 cor.mtest <- function(mat, ...) {
   mat <- as.matrix(mat)
@@ -55,55 +64,24 @@ cor.mtest <- function(mat, ...) {
       p.mat[i, j] <- p.mat[j, i] <- tmp$p.value}}
   colnames(p.mat) <- rownames(p.mat) <- colnames(mat)
   p.mat}
-```
-# matrix of the p-value of the correlation
-```r
-p.mat <- cor.mtest(df)
+
+p.mat <- cor.mtest(data)
 col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA"))
 
-corrplot(cor(df), method = "color",col=col(200), type = "upper", order = "hclust",addCoef.col = "black",tl.col="black", tl.srt=45,p.mat = p.mat, sig.level = 0.05,insig = "blank",diag=FALSE,)
+corrplot(cor(data), method = "color",col=col(200), type = "upper", order = "hclust",addCoef.col = "black",tl.col="black", tl.srt=45,p.mat = p.mat, sig.level = 0.05,insig = "blank",diag=FALSE,)
 ```
-# Need to change a to data we want to use
-```r
-set.seed(1234)
-a=sample(1:299,239)
-train=heart[a,]
-test=heart[-a,]
-```
-# MLR
-```r
-lr.model=glm(DEATH_EVENT~.,family=binomial,data=train)
-lr.model0=glm(DEATH_EVENT~1,family=binomial,data=train)
-anova(lr.model,lr.model0, test='Chisq')
-summary(lr.model)
-```
-# Stepwise model
-```r
-library(randomForest)
 
-lr.model.st=step(lr.model)
-summary(lr.model.st)
-
-feat_imp_df <- importance(fit) %>% data.frame() %>%  mutate(feature = row.names(.)) 
-```
-# plot dataframe
-```r
-ggplot(feat_imp_df, aes(x = reorder(feature, MeanDecreaseGini), y = MeanDecreaseGini)) + geom_bar(stat='identity') 
-+ coord_flip() + theme_classic() + labs(x = "Feature", y = "Importance", title = "Feature Importance: <Model>")
-```
-# NEED TO LOOK AT SERUM, PALATELS,CREATININE, AGE, EJECTION, SODIUM? FOR OUTLIERS
+## Helps us identify what variables have a disperse distribution and possible outliers
 ```r
 plot_histogram(heart, ncol = .5L, ggtheme = theme_classic())
-plot_boxplot(heart, by = "DEATH_EVENT", ncol = .5L)
-
-hist(heart$serum_creatinine)
-
-ggplot(df, aes(x=age, y=DEATH_EVENT)) + 
-  geom_bar(stat = "identity", width=0.5) #+ stat_smooth(method=loess)
-
 plot_bar(heart)
 ```
-
+## Allows us to look at where most deaths fall based on age
+```r
+ggplot(df, aes(x=age, y=DEATH_EVENT)) +  geom_bar(stat = "identity", width=0.5) #+ stat_smooth(method=loess)
+```
+# FIX BELOW
+## Using what we found, we need to look at Creatinine Phosphokinase, Platelets, Serum Creatinine, Age, Ejection Fraction, and Serum Sodium
 ```r
 boxplot(heart[-9], col = "orange", main = "Features Boxplot")
 boxplot(heart$creatinine_phosphokinase, col = "red")
@@ -113,7 +91,6 @@ boxplot.stats(heart$creatinine_phosphokinase)$out
 
 boxplot(heart$platelets, col = "red")
 boxplot.stats(heart$platelets)$out
-
 
 boxplot(heart$serum_creatinine, col = "red")
 serum_outliers <- which(heart$serum_creatinine > 2.1)
@@ -135,12 +112,12 @@ boxplot(heart$serum_sodium,
         main = "")
 mtext(paste("Outliers: ", paste(out, collapse = ", ")))
 ```
-# no multicollinearity
+## no multicollinearity
 ```r
 simple_lm <- lm(DEATH_EVENT ~ ., data = df)
 vif(simple_lm)
 ```
-# Rosner’s test
+## Rosner’s test
 ## it is used to detect several outliers at once (unlike Grubbs and Dixon test which must be performed repetitively to screen for multiple outliers), and is designed to avoid the problem of masking, where an outlier that is close in value to another outlier can go undetected.
 ```r
 library(EnvStats)
@@ -169,4 +146,19 @@ ad.test(heart$age)
 ad.test(heart$time)
 ad.test(heart$ejection_fraction)
 ad.test(heart$serum_creatinine)
+```
+## Logit Regression
+```r
+set.seed(1234)
+a=sample(1:299,239)
+train=heart[a,]
+test=heart[-a,]
+
+lr.model=glm(DEATH_EVENT~.,family=binomial,data=train)
+summary(lr.model)
+```
+## Stepwise model
+```r
+lr.model.st=step(lr.model)
+summary(lr.model.st)
 ```
