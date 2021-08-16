@@ -51,7 +51,7 @@ heart$smoking=factor(heart$smoking)
 heart$DEATH_EVENT=factor(heart$DEATH_EVENT)
 ```
 
-## matrix of the p-value of the correlation
+## Here is a function that helps show what correlations are significant and contributes to creating a well organized correlation matrix
 ```r
 cor.mtest <- function(mat, ...) {
   mat <- as.matrix(mat)
@@ -80,45 +80,52 @@ plot_bar(heart)
 ```r
 ggplot(df, aes(x=age, y=DEATH_EVENT)) +  geom_bar(stat = "identity", width=0.5) #+ stat_smooth(method=loess)
 ```
-# FIX BELOW
-## Using what we found, we need to look at Creatinine Phosphokinase, Platelets, Serum Creatinine, Age, Ejection Fraction, and Serum Sodium
+## Using what was found, we need to look at Creatinine Phosphokinase, Platelets, Serum Creatinine, Age, Ejection Fraction, and Serum Sodium for outliers. We find that there a lot of outliers in most of these and that age does not have any and that platelets has the most. A further test will be conducted in order to see if these are all true outliers.
 ```r
-boxplot(heart[-9], col = "orange", main = "Features Boxplot")
-boxplot(heart$creatinine_phosphokinase, col = "red")
-age_outliers <- which(heart$creatinine_phosphokinase > 1000)
-heart[age_outliers, "creatinine_phosphokinase"]
-boxplot.stats(heart$creatinine_phosphokinase)$out
+boxplot(heart, col = "orange", main = "Features Boxplot")
 
-boxplot(heart$platelets, col = "red")
+out<-boxplot.stats(heart$creatinine_phosphokinase)$out
+boxplot(heart$creatinine_phosphokinase,
+        ylab = "creatinine_phosphokinase",
+        main = "")
+mtext(paste("Outliers: ", paste(out, collapse = ", ")))
+cp_outliers <- which(heart$creatinine_phosphokinase > 1000)
+heart[cp_outliers, "creatinine_phosphokinase"]
+
 boxplot.stats(heart$platelets)$out
 
-boxplot(heart$serum_creatinine, col = "red")
-serum_outliers <- which(heart$serum_creatinine > 2.1)
-heart[serum_outliers, "serum_creatinine"]
-boxplot.stats(heart$serum_creatinine)$out
+out<-boxplot.stats(heart$serum_creatinine)$out
+boxplot(heart$serum_creatinine,
+        ylab = "serum_creatinine",
+        main = "")
+mtext(paste("Outliers: ", paste(out, collapse = ", ")))
+serumcreatinine_outliers <- which(heart$serum_creatinine > 2.1)
+heart[serumcreatinine_outliers, "serum_creatinine"]
 
-boxplot(heart$ejection_fraction, col = "red")
-serum2_outliers <- which(heart$ejection_fraction > 65)
-heart[serum2_outliers, "ejection_fraction"]
-boxplot.stats(heart$ejection_fraction)$out
+boxplot(heart$age, col = "red")
 
-boxplot(heart$serum_sodium, col = "red")
-serum3_outliers <- which(heart$serum_sodium < 125)
-heart[serum2_outliers, "serum_sodium"]
+out<-boxplot.stats(heart$ejection_fraction)$out
+boxplot(heart$ejection_fraction,
+        ylab = "ejection_fraction",
+        main = "")
+mtext(paste("Outliers: ", paste(out, collapse = ", ")))
+ef_outliers <- which(heart$ejection_fraction > 65)
+heart[ef_outliers, "ejection_fraction"]
 
 out<-boxplot.stats(heart$serum_sodium)$out
 boxplot(heart$serum_sodium,
         ylab = "serum_sodium",
         main = "")
 mtext(paste("Outliers: ", paste(out, collapse = ", ")))
+serumsodium_outliers <- which(heart$serum_sodium < 125)
+heart[serumsodium_outliers, "serum_sodium"]
 ```
-## no multicollinearity
+## Multicollinearity check (no issues found)
 ```r
 simple_lm <- lm(DEATH_EVENT ~ ., data = df)
 vif(simple_lm)
 ```
-## Rosner’s test
-## it is used to detect several outliers at once (unlike Grubbs and Dixon test which must be performed repetitively to screen for multiple outliers), and is designed to avoid the problem of masking, where an outlier that is close in value to another outlier can go undetected.
+## Rosner’s test: Used to detect several outliers at once (unlike Grubbs and Dixon test which must be performed repetitively to screen for multiple outliers) and is designed to avoid the problem of masking - where an outlier that is close in value to another outlier can go undetected. Using the amount of outliers shown through our boxplot's "$out" function, this was used to tell the test how many outliers we assumed there might be. Most of these variables had less outliers than assumed with the boxplot, however, ending up with around 40 or so outliers is unfavorable to try and get rid of since our dataset is 300 rows. The idea here is to remove those data points outside the three standard deviations (97%) so 3% was effectively removed via Orange and will be described as to how next.
 ```r
 library(EnvStats)
 test <- rosnerTest(heart$creatinine_phosphokinase, k = 36)
@@ -140,14 +147,16 @@ test$all.stats
 test <- rosnerTest(heart$serum_sodium, k = 4)
 test
 test$all.stats
-
+```
+## Here we can check if the distribution of these variables is gaussian or not... we find that all have significant p-values meaning that each is not normally distributed. This is important because while using Orange to data mine and remove outliers, I had to use a specific method purely for removing oultiers in a non-normal distribution (this is addressed deeper in the Power BI presentation)
+```r
 library(nortest)
 ad.test(heart$age)
 ad.test(heart$time)
 ad.test(heart$ejection_fraction)
 ad.test(heart$serum_creatinine)
 ```
-## Logit Regression
+## Logit Regression to see how well a general binary model performs in predicting the death event
 ```r
 set.seed(1234)
 a=sample(1:299,239)
@@ -157,7 +166,7 @@ test=heart[-a,]
 lr.model=glm(DEATH_EVENT~.,family=binomial,data=train)
 summary(lr.model)
 ```
-## Stepwise model
+## Stepwise model to show what variables are most important and see what influence they have. This is compared to the mulitple models tried in Orange and relates to the ending analyses of this project
 ```r
 lr.model.st=step(lr.model)
 summary(lr.model.st)
