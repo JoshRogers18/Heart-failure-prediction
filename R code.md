@@ -4,7 +4,7 @@
 ### Date: 7/16/2021
 
 ### Question: Can we predict heart failure 80% of the time and what variables are most important?
-#### Here we will be looking at a multitude of things that helped perform a better analysis on this data
+#### Here we will be looking at a multitude of things that helped perform a better analysis on this data in Orange when data mining. Here was the code I used for making decisions with the data.
 
 - Correlations
 - Multicollinearity
@@ -70,15 +70,14 @@ col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA")
 
 corrplot(cor(data), method = "color",col=col(200), type = "upper", order = "hclust",addCoef.col = "black",tl.col="black", tl.srt=45,p.mat = p.mat, sig.level = 0.05,insig = "blank",diag=FALSE,)
 ```
-
+## Allows us to look at where most deaths fall based on age
+```r
+ggplot(df, aes(x=age, y=DEATH_EVENT)) +  geom_bar(stat = "identity", width=0.5) #+ stat_smooth(method=loess)
+```
 ## Helps us identify what variables have a disperse distribution and possible outliers
 ```r
 plot_histogram(heart, ncol = .5L, ggtheme = theme_classic())
 plot_bar(heart)
-```
-## Allows us to look at where most deaths fall based on age
-```r
-ggplot(df, aes(x=age, y=DEATH_EVENT)) +  geom_bar(stat = "identity", width=0.5) #+ stat_smooth(method=loess)
 ```
 ## Using what was found, we need to look at Creatinine Phosphokinase, Platelets, Serum Creatinine, Age, Ejection Fraction, and Serum Sodium for outliers. We find that there a lot of outliers in most of these and that age does not have any and that platelets has the most. A further test will be conducted in order to see if these are all true outliers.
 ```r
