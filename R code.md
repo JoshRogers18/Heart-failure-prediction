@@ -3,17 +3,22 @@
 ### Author: Josh Rogers 
 ### Date: 7/16/2021
 
+### Link to data: https://www.kaggle.com/andrewmvd/heart-failure-clinical-data
 ### Question: Can we predict heart failure 80% of the time and what variables are most important?
-#### Here we will be looking at a multitude of things that helped perform a better analysis on this data in Orange when data mining. Here was the code I used for making decisions with the data.
-
-- Correlations
-- Multicollinearity
-- Outliers
-- Rosner Test
-- Anderson-Darling Test
-- Logistic Regression
-- Stepwise Regression
-
+### Here we will be looking at a multitude of things that helped perform a better analysis on this data in Orange when data mining. Below you'll find the code I used for making decisions with the data.
+---
+## Table of contents
+| Topic                      | Description |
+| :-                         |    :-       |
+| Correlations               | Look at what variables may be directly related and may possibly be boosting output metric based on their significance |
+| Multicollinearity          | Check the Variance Inflation Factor scores (VIFs) to see if there is boosting                                         |
+| Outliers                   | Willlook at boxplots to see what variables may have outliers and then look at each of those individually              |
+| Rosner Test                | Taking outliers a step further to see if they are true outliers                                                       |
+| Anderson-Darling Test      | Used to check variable distribution (if normal or not because this can influence outlier removal)                     |
+| Logistic Regression        | Used to see how well binary model fits                                                                                |
+| Stepwise Regression        | Used to pull out most important variables                                                                             |
+---
+### RStudio packages and data implementation
 ```r
 library(dplyr)
 library(ggplot2)
@@ -51,7 +56,7 @@ heart$smoking=factor(heart$smoking)
 heart$DEATH_EVENT=factor(heart$DEATH_EVENT)
 ```
 
-## Here is a function that helps show what correlations are significant and contributes to creating a well organized correlation matrix
+### Here is a function that helps show what correlations are significant and contributes to creating a well organized correlation matrix
 ```r
 cor.mtest <- function(mat, ...) {
   mat <- as.matrix(mat)
@@ -70,16 +75,17 @@ col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA")
 
 corrplot(cor(data), method = "color",col=col(200), type = "upper", order = "hclust",addCoef.col = "black",tl.col="black", tl.srt=45,p.mat = p.mat, sig.level = 0.05,insig = "blank",diag=FALSE,)
 ```
-## Allows us to look at where most deaths fall based on age
+### Allows us to look at where most deaths fall based on age
 ```r
 ggplot(df, aes(x=age, y=DEATH_EVENT)) +  geom_bar(stat = "identity", width=0.5) #+ stat_smooth(method=loess)
 ```
-## Helps us identify what variables have a disperse distribution and possible outliers
+### Helps us identify what variables have a disperse distribution and possible outliers
 ```r
 plot_histogram(heart, ncol = .5L, ggtheme = theme_classic())
 plot_bar(heart)
 ```
-## Using what was found, we need to look at Creatinine Phosphokinase, Platelets, Serum Creatinine, Age, Ejection Fraction, and Serum Sodium for outliers. We find that there a lot of outliers in most of these and that age does not have any and that platelets has the most. A further test will be conducted in order to see if these are all true outliers.
+### Using what was found, we need to look at Creatinine Phosphokinase, Platelets, Serum Creatinine, Age, Ejection Fraction, and Serum Sodium for outliers. 
+#### We find that there a lot of outliers in most of these and that age does not have any and that platelets has the most. A further test will be conducted in order to see if these are all true outliers.
 ```r
 boxplot(heart, col = "orange", main = "Features Boxplot")
 
@@ -119,12 +125,13 @@ mtext(paste("Outliers: ", paste(out, collapse = ", ")))
 serumsodium_outliers <- which(heart$serum_sodium < 125)
 heart[serumsodium_outliers, "serum_sodium"]
 ```
-## Multicollinearity check (no issues found)
+### Multicollinearity check (no issues found)
 ```r
 simple_lm <- lm(DEATH_EVENT ~ ., data = df)
 vif(simple_lm)
 ```
-## Rosner’s test: Used to detect several outliers at once (unlike Grubbs and Dixon test which must be performed repetitively to screen for multiple outliers) and is designed to avoid the problem of masking - where an outlier that is close in value to another outlier can go undetected. Using the amount of outliers shown through our boxplot's "$out" function, this was used to tell the test how many outliers we assumed there might be. Most of these variables had less outliers than assumed with the boxplot, however, ending up with around 40 or so outliers is unfavorable to try and get rid of since our dataset is 300 rows. The idea here is to remove those data points outside the three standard deviations (97%) so 3% was effectively removed via Orange and will be described as to how next.
+### Rosner’s test: Used to detect several outliers at once (unlike Grubbs and Dixon test which must be performed repetitively to screen for multiple outliers) and is designed to avoid the problem of masking - where an outlier that is close in value to another outlier can go undetected. Using the amount of outliers shown through our boxplot's "$out" function, this was used to tell the test how many outliers we assumed there might be. 
+#### Most of these variables had less outliers than assumed with the boxplot, however, ending up with around 40 or so outliers is unfavorable to try and get rid of since our dataset is 300 rows. The idea here is to remove those data points outside the three standard deviations (97%) so 3% was effectively removed via Orange and will be described as to how next.
 ```r
 library(EnvStats)
 test <- rosnerTest(heart$creatinine_phosphokinase, k = 36)
@@ -147,7 +154,8 @@ test <- rosnerTest(heart$serum_sodium, k = 4)
 test
 test$all.stats
 ```
-## Here we can check if the distribution of these variables is gaussian or not... we find that all have significant p-values meaning that each is not normally distributed. This is important because while using Orange to data mine and remove outliers, I had to use a specific method purely for removing oultiers in a non-normal distribution (this is addressed deeper in the Power BI presentation)
+### Here we can check if the distribution of these variables is gaussian or not... we find that all have significant p-values meaning that each is not normally distributed. 
+#### This is important because while using Orange to data mine and remove outliers, I had to use a specific method purely for removing oultiers in a non-normal distribution (this is addressed deeper in the Power BI presentation)
 ```r
 library(nortest)
 ad.test(heart$age)
@@ -155,7 +163,7 @@ ad.test(heart$time)
 ad.test(heart$ejection_fraction)
 ad.test(heart$serum_creatinine)
 ```
-## Logit Regression to see how well a general binary model performs in predicting the death event
+### Logit Regression to see how well a general binary model performs in predicting the death event
 ```r
 set.seed(1234)
 a=sample(1:299,239)
@@ -165,7 +173,8 @@ test=heart[-a,]
 lr.model=glm(DEATH_EVENT~.,family=binomial,data=train)
 summary(lr.model)
 ```
-## Stepwise model to show what variables are most important and see what influence they have. This is compared to the mulitple models tried in Orange and relates to the ending analyses of this project
+### Stepwise model to show what variables are most important and see what influence they have. 
+#### This is compared to the mulitple models tried in Orange and relates to the ending analyses of this project
 ```r
 lr.model.st=step(lr.model)
 summary(lr.model.st)
